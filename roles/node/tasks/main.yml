@@ -1,0 +1,195 @@
+---
+- name: install dependencies (Debian 10)
+  apt:
+    name: [ "git", "build-essential", "python-docker", "jq", "pass", "lz4", "bc" ]
+    state: present
+    cache_valid_time: 3600
+  when: ansible_distribution == 'Debian' and ansible_distribution_major_version == '10'
+
+- name: install dependencies (Debian 11/12)
+  apt:
+    name: [ "git", "build-essential", "python3-docker", "jq", "lz4", "python3-distutils", "bc" ]
+    state: present
+    cache_valid_time: 3600
+  when: ansible_distribution == 'Debian' and ansible_distribution_major_version >= '11'
+
+- name: install dependencies (Ubuntu 20.04/22.04)
+  apt:
+    name: [ "git", "build-essential", "python3-docker", "jq", "lz4", "python3-distutils", "bc" ]
+    state: present
+    cache_valid_time: 3600
+  when: ansible_distribution == 'Ubuntu' and ( ansible_facts['lsb']['release'] == '20.04' or ansible_facts['lsb']['release'] == '22.04')
+
+#
+# Initialize variables 
+#
+
+- name: include variables for docker, lvm, ufw and {{ service_name }}
+  include_vars: "{{ item }}"
+  loop:
+    - "01-docker_vars.yml"
+    - "02-lvm_vars.yml"
+    - "03-ufw_vars.yml"
+    - "{{ service }}_vars.yml"
+  tags:
+    - docker
+    - lvm
+    - ufw
+
+- name: determine public IP address
+  uri:
+    url: http://ifconfig.me/ip
+    return_content: yes
+  register: public_ip
+
+#
+# Docker
+#
+
+- name: 01 | install docker packages and docker-compose
+  include_tasks: "01-docker.yml"
+  tags:
+    - docker
+
+#
+# User
+#
+
+- name: current service
+  debug:
+    msg: "running {{ service_name }} ({{ name_environment }})"
+  tags: [ 'config' ]
+
+- name: getent {{ service_user }} user info
+  getent:
+    database: passwd
+    key: "{{ service_user }}"
+    fail_key: false
+  register: getent_docker_user
+  tags:
+    - lvm
+
+- name: create new group with new gid for service user {{ service_user }} if not exist
+  group:
+    name: "{{ service_user }}"
+    gid:  "{{ service_docker_gid }}"
+  when: (ansible_facts.getent_passwd[service_user] | type_debug) == 'NoneType'
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+
+- name: create new service user with new uid {{ service_user }} if not exist
+  user:
+    name: "{{ service_user }}"
+    uid:  "{{ service_docker_uid }}"
+    home: "{{ service_user_home }}"
+    shell: "{{ service_user_shell }}"
+    append: true
+    groups: docker
+  when: (ansible_facts.getent_passwd[service_user] | type_debug) == 'NoneType'
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+
+- name: gather service user details of {{ service_user }}
+  user:
+    name: "{{ service_user }}"
+    append: true
+    groups: docker
+  ignore_errors: "{{ ansible_check_mode }}"
+  register: service_docker_user
+
+#
+# LVM
+#
+
+- name: 02 | provision LVM volumes
+  include_tasks: "02-lvm.yml"
+  when: lvm_enabled
+  tags:
+    - lvm
+
+#
+# UFW
+#
+
+- name: 03 | apply UFW rules
+  include_tasks: "03-ufw.yml"
+  tags:
+    - ufw
+
+#
+# Directories
+#
+
+- name: create application directory for {{ service_name }}
+  file:
+    path: "{{ service_app_dir }}"
+    state: directory
+    owner: "{{ service_user }}"
+    group: "{{ service_user }}"
+    mode: 0700
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: create application data directory for {{ service_name }}
+  file:
+    path: "{{ service_data_dir }}"
+    state: directory
+    owner: "{{ service_user }}"
+    group: "{{ service_user }}"
+    mode: 0700
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: execute service-specific tasks for {{ service_name }}
+  include_tasks: "{{ service }}.yml"
+
+- name: copy docker-compose files for {{ service_name }}
+  template:
+    src: "{{ service }}/{{ item }}"
+    dest: "{{ service_docker_compose_dir }}/{{ item }}"
+    owner: "{{ service_user }}"
+    group: "{{ service_user }}"
+    mode: 0644
+  with_items: "{{ docker_compose_files }}"
+  when: docker_compose_files is iterable and docker_compose_files is not string
+  ignore_errors: true
+  register: compose_files_changed
+
+#
+# Pull Docker Image
+#
+
+# - name: pull docker image
+#   docker_image:
+#     name: "{{ docker_image }}:{{ docker_tag }}"
+#     source: pull
+#   when: docker_image is defined
+#   become: true
+#   become_user: "{{ service_user }}"
+
+#
+# Systemd
+#
+
+- name: install systemd service for {{ service_systemd_unit }}
+  template:
+    src: "docker-compose.service"
+    dest: "/etc/systemd/system/{{ service_systemd_unit }}.service"
+  tags:
+    - systemd
+
+- name: enable {{ service_systemd_unit }} service in systemd
+  systemd:
+    name: "{{ service_systemd_unit }}"
+    enabled: yes
+    daemon_reload: yes
+  tags:
+    - systemd
+
+- name: restart service
+  systemd:
+    name: "{{ service_systemd_unit }}.service"
+    state: restarted
+  when: (service_restart is defined) and (service_restart|bool == true)
+  tags: [ 'config' ]
+

@@ -1,0 +1,4 @@
+---
+lvm_enabled: true
+lvm_vg_list: []
+lvm_lv_list: []

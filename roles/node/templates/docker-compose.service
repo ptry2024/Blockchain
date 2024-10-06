@@ -1,0 +1,21 @@
+#jinja2: trim_blocks:False
+# {{ ansible_managed }}
+[Unit]
+After=network.target
+
+[Service]
+WorkingDirectory={{ service_docker_compose_dir }}
+ExecStart=/usr/local/bin/docker-compose up
+ExecStop=/usr/local/bin/docker-compose down
+SyslogIdentifier={{ service_systemd_unit }}
+PrivateTmp=true
+Restart=on-failure
+User={{ service_user }}
+Group={{ service_user }}
+Environment=LAUNCHED_BY_SYSTEMD=1
+# prevents systemd from killing {{ service_systemd_unit }} during a database upgrade
+TimeoutSec=infinity
+LimitNOFILE=131072
+
+[Install]
+WantedBy=multi-user.target

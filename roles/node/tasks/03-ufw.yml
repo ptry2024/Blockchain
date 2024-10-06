@@ -1,0 +1,21 @@
+---
+#
+# Firewall
+#
+- name: 03-ufw | allow p2p incoming ports from anywhere for {{ service_name }} {{ service_network }}
+  ufw:
+    rule: allow
+    direction: in
+    from_ip: 0.0.0.0/0
+    to_port: "{{ item.to_port }}"
+    proto: "{{ item.proto }}"
+  loop: "{{ ufw_list_anywhere_p2p_port if ufw_list_anywhere_p2p_port is iterable and ufw_list_anywhere_p2p_port is not string else [] }}"
+  tags:
+    - ufw
+
+- name: 03-ufw | start ufw
+  service:
+    name: ufw
+    state: started
+  tags:
+    - ufw

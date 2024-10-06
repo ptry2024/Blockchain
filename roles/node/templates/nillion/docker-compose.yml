@@ -1,0 +1,14 @@
+version: '2.1'
+services:
+  core:
+    image: nillion/verifier:v1.0.1
+    command: 
+      - "verify"
+      - "--rpc-endpoint"
+      - "https://nillion-testnet-rpc.polkachu.com"
+    volumes:
+      - /opt/data/nillion/data/verifier/nillion/verifier:/var/tmp
+    restart: on-failure
+    stop_grace_period: 2m
+    stop_signal: SIGTERM
+    network_mode: host

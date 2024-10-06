@@ -1,0 +1,14 @@
+#############################
+# VM-TEST-DEPLOY
+#############################
+
+- hosts: vm-test-deploy
+  become: true
+  become_user: root
+  remote_user: azureuser
+
+  roles:
+  - { role: node,
+      service_name: nillion,
+      service_network: nillion-chain-testnet-1,
+      tags: [ 'nillion' ] }

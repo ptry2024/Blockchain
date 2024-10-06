@@ -1,0 +1,10 @@
+---
+###   Non-host/Non-environment-specific variables
+# Docker Compose
+docker_compose_version: v2.16.0
+docker_compose_url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-linux-x86_64
+docker_compose_checksum: "sha256:54ab01967b05e392e6bf13afbc654146890b9fa40501b40aca83a2db18f10427"
+docker_compose_dest: "/usr/local/bin/docker-compose"
+docker_compose_files:
+  - docker-compose.yml
+  - docker-compose.override.yml

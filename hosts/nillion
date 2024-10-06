@@ -1,0 +1,6 @@
+all:
+  vars:
+    name_environment: testnet
+  hosts:
+    vm-test-deploy:
+      ansible_host: 4.194.250.72

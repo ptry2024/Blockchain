@@ -1,0 +1,39 @@
+---
+#
+# Docker
+#
+
+docker_image: nillion/verifier
+docker_tag: v1.0.1
+
+docker_compose_files:
+  - docker-compose.yml
+
+#
+# LVM
+#
+
+lvm_enabled: false
+
+#
+# UFW
+#
+
+ufw_list_anywhere_p2p_port:
+  - to_port: "26656"
+    proto: "tcp"
+  - to_port: "26656"
+    proto: "udp"
+ufw_list_trusted_rpc_port:
+  - "26657" # RPC (TCP)
+#
+# SERVICE
+#
+
+service: nillion
+service_network: "nillion-chain-testnet-1"
+service_data_dir: "/opt/data/{{ service_name }}"
+service_container_dir: "/config"
+service_docker_uid: "10001"
+service_docker_gid: "10001"
+service_container_name: nillion

@@ -1,0 +1,27 @@
+---
+# Service
+service: "{{ service_name }}"
+service_name: "unknown"
+service_network: "mainnet"
+service_user: "{{ service_name }}"
+service_user_home: "/var/lib/{{ service_name }}"
+service_user_shell: "/bin/false"
+service_systemd_unit: "{{ service_name }}"
+service_docker_uid: "{{ service_docker_user.uid | default(1014) }}"
+service_docker_gid: "{{ service_docker_user.group | default(1014) }}"
+service_app_dir: "/opt/{{ service_name }}"
+service_data_dir: "/opt/data/{{ service_name }}"
+service_container_dir: "/var/lib/{{ service_name }}"
+service_log_dir: "/var/log/{{ service_name }}"
+service_docker_compose_dir: "{{ service_app_dir }}"
+service_external_address: "{{ public_ip.content | default(hostvars[inventory_hostname]['external_ip'] ) }}"
+service_internal_address: "{{ ansible_default_ipv4.address }}"
+
+# LVM
+lvm_enabled: false
+
+# Docker
+docker_network_cidr: "192.168.111.0/24"
+docker_network_gw: "192.168.111.1"
+
+linux_architecture: "amd64"

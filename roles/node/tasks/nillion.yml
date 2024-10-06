@@ -1,0 +1,18 @@
+---
+- name: create config directory under home directory for {{ service_name }}
+  file:
+    path: "{{ service_data_dir }}/config"
+    state: directory
+    owner: "{{ service_docker_uid }}"
+    group: "{{ service_docker_gid }}"
+    mode: 0700
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: create data directory under home directory for {{ service_name }}
+  file:
+    path: "{{ service_data_dir }}/data/verifier"
+    state: directory
+    owner: "{{ service_docker_uid }}"
+    group: "{{ service_docker_gid }}"
+    mode: 0700
+  ignore_errors: "{{ ansible_check_mode }}"

@@ -1,0 +1,7 @@
+---
+ufw_list_trusted:
+  - ufw_list_trusted_from_ip
+  - ufw_list_trusted_rpc_port
+ufw_list_trusted_from_ip: "{{ ufw_list_trusted_from_ip_list[ufw_list_trusted_from_ip_name] }}"
+ufw_list_trusted_from_ip_name: "{{ service_network }}"
+

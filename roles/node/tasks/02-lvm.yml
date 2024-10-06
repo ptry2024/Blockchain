@@ -1,0 +1,86 @@
+---
+- name: 02-lvm | install lvm2 tools
+  apt:
+    name: lvm2
+    state: present
+    update_cache: yes 
+    cache_valid_time: 3600
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+
+- name: 02-lvm | create data directories for {{ service_name }}
+  file:
+    state: directory
+    path: "/opt/data/{{ item }}"
+    owner: "{{ service_user }}"
+    group: "{{ service_user }}"
+    mode: 0700
+  with_items:
+    - "{{ service_name }}"
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+
+- name: 02-lvm | create volume groups
+  lvg:
+    vg: "{{ item.name }}"
+    pvs: "{{ item.devices }}"
+  loop: "{{ lvm_vg_list }}"
+  when: lvm_vg_list is iterable
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+
+- name: 02-lvm | create logical volumes
+  lvol:
+    vg: "{{ item.v_group }}"
+    lv: "{{ item.name }}"
+    size: "{{ item.size }}"
+    opts: "{{ item.lvm_options }}"
+  loop: "{{ lvm_lv_list }}"
+  when: lvm_lv_list is iterable and item.name not in ansible_lvm["lvs"] # if this fails, lvm was not installed before ansible run - just run it again
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+
+- name: 02-lvm | create filesystems
+  filesystem:
+    dev: "/dev/mapper/{{ item.v_group }}-{{ item.name }}"
+    fstype: ext4
+  loop: "{{ lvm_lv_list }}"
+  when: lvm_lv_list is iterable
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+    - filesystem
+
+- name: 02-lvm | ensure the correct size of LV and resize the filesystems
+  lvol:
+    vg: "{{ item.v_group }}"
+    lv: "{{ item.name }}"
+    size: "{{ item.size }}"
+    resizefs: yes
+    force: yes
+  loop: "{{ lvm_lv_list }}"
+  when: lvm_lv_list is iterable
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+    - filesystem
+
+- name: 02-lvm | mount volumes
+  mount:
+    path: "{{ item.mount_path }}"
+    src: "/dev/mapper/{{ item.v_group }}-{{ item.name }}"
+    fstype: ext4
+    opts: "{{ item.mount_options }}"
+    dump: '0'
+    passno: '2'
+    state: mounted
+  loop: "{{ lvm_lv_list }}"
+  when: lvm_lv_list is iterable
+  ignore_errors: "{{ ansible_check_mode }}"
+  tags:
+    - lvm
+    - mount
