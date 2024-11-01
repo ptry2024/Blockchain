@@ -2,10 +2,9 @@
 # VM-TEST-DEPLOY
 #############################
 
-- hosts: vm-test-deploy
+- hosts: blk-poc-01,blk-nillion-kelvin
   become: true
   become_user: root
-  remote_user: azureuser
 
   roles:
   - { role: node,
