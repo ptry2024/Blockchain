@@ -4,3 +4,7 @@ all:
   hosts:
     vm-test-deploy:
       ansible_host: 4.194.250.72
+    blk-poc-01:
+      ansible_host: 103.172.237.121
+    blk-nillion-kelvin:
+      ansible_host: 103.172.237.55
